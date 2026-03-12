@@ -121,6 +121,14 @@ The `padding` option can be one of the following:
 
 -doc """
 Equivalent to [`encode(Data)`](`encode/1`), but returns a `t:byte_string/0`.
+
+_Example_:
+```erlang
+1> base64:encode_to_string("Hello World").
+"SGVsbG8gV29ybGQ="
+2> base64:encode_to_string(<<255>>).
+"/w=="
+```
 """.
 -spec encode_to_string(Data) -> Base64String when
       Data :: byte_string() | binary(),
@@ -131,6 +139,16 @@ encode_to_string(Data) ->
 
 -doc """
 Equivalent to [`encode(Data, Options)`](`encode/2`), but returns a `t:byte_string/0`.
+
+_Example_:
+```erlang
+1> base64:encode_to_string("Hello World", #{padding => false}).
+"SGVsbG8gV29ybGQ"
+2> base64:encode_to_string("abc", #{mode => urlsafe}).
+"YWJj"
+3> base64:encode_to_string(<<255>>, #{mode => urlsafe}).
+"_w=="
+```
 """.
 -doc(#{since => <<"OTP 26.0">>}).
 -spec encode_to_string(Data, Options) -> Base64String when
@@ -143,6 +161,17 @@ encode_to_string(Bin, Options) when is_binary(Bin), is_map(Options) ->
 encode_to_string(List, Options) when is_list(List), is_map(Options) ->
     encode_list_to_string(get_encoding_offset(Options), get_padding(Options), List).
 
+-doc """
+Equivalent to [`encode(Data, #{})`](`encode/2`).
+
+_Example_:
+```erlang
+1> base64:encode("Hello World").
+<<"SGVsbG8gV29ybGQ=">>
+2> base64:encode(<<255>>).
+<<"/w==">>
+```
+""".
 -doc(#{ equiv => encode(Data, #{}) }).
 -spec encode(Data) -> Base64 when
       Data :: byte_string() | binary(),
@@ -155,6 +184,16 @@ Encodes a plain ASCII string into base64 using the alphabet indicated by the
 `mode` option. The result is 33% larger than the data.
 
 See `t:encode_options/0` for details on which options can be passed.
+
+_Example_:
+```erlang
+1> base64:encode("Hello World", #{padding => false}).
+<<"SGVsbG8gV29ybGQ">>
+2> base64:encode("abc", #{mode => urlsafe}).
+<<"YWJj">>
+3> base64:encode(<<255>>, #{mode => urlsafe}).
+<<"_w==">>
+```
 """.
 -doc(#{since => <<"OTP 26.0">>}).
 -spec encode(Data, Options) -> Base64 when
@@ -261,6 +300,25 @@ encode_list(ModeOffset, Padding, [B1,B2,B3|Ls], A) ->
 %% mime_decode strips away all characters not Base64 before
 %% converting, whereas decode crashes if an illegal character is found
 
+-doc """
+Equivalent to [`decode(Data, #{})`](`decode/2`).
+
+_Example_:
+```erlang
+1> base64:decode("AQIDBA==").
+<<1,2,3,4>>
+2> base64:decode("AQ ID BA==").
+<<1,2,3,4>>
+3> base64:decode("AQIDBA=").
+** exception error: missing_padding
+     in function  base64:decode_list/7 
+        *** data to decode is missing final = padding characters, if this is intended, use the `padding => false` option
+4> base64:decode("_w==").
+** exception error: construction of binary failed
+     in function  base64:decode_list/7 
+        *** segment 2 of type 'integer': expected an integer but got: bad
+```
+""".
 -doc(#{equiv => decode(Base64, #{})}).
 -spec decode(Base64) -> Data when
       Base64 :: base64_string() | base64_binary(),
@@ -281,16 +339,10 @@ See `t:decode_options/0` for details on which options can be passed.
 
 _Example_:
 ```erlang
-1> base64:decode("AQIDBA==").
+1> base64:decode("AQIDBA=", #{padding => false}).
 <<1,2,3,4>>
-2> base64:decode("AQ ID BA==").
-<<1,2,3,4>>
-3> base64:decode("AQIDBA=").
-** exception error: missing_padding
-     in function  base64:decode_list/7 (base64.erl, line 734)
-        *** data to decode is missing final = padding characters, if this is intended, use the `padding => false` option
-4> base64:decode("AQIDBA=", #{ padding => false }).
-<<1,2,3,4>>
+2> base64:decode("_w==", #{mode => urlsafe}).
+<<"ÿ">>
 ```
 """.
 -doc(#{since => <<"OTP 26.0">>}).
@@ -304,6 +356,17 @@ decode(Bin, Options) when is_binary(Bin) ->
 decode(List, Options) when is_list(List) ->
     decode_list(get_decoding_offset(Options), get_padding(Options), List, <<>>).
 
+-doc """
+Equivalent to [`mime_decode(Data, #{})`](`mime_decode/2`).
+
+_Example_:
+```erlang
+1> base64:mime_decode("AQIDBA==").
+<<1,2,3,4>>
+2> base64:mime_decode("AQIDB=A=").
+<<1,2,3,4>>
+```
+""".
 -doc(#{equiv => mime_decode_to_string(Base64, #{})}).
 -spec mime_decode(Base64) -> Data when
       Base64 :: base64_string() | base64_binary(),
@@ -324,18 +387,19 @@ See `t:decode_options/0` for details on which options can be passed.
 
 _Example_:
 ```erlang
-1> base64:mime_decode("AQIDBA==").
+1> base64:mime_decode("AQIDBA==", #{ padding => false}).
 <<1,2,3,4>>
-2> base64:mime_decode("AQIDB=A=").
+2> base64:mime_decode("AQIDB=A=", #{mode => urlsafe}).
 <<1,2,3,4>>
 ```
+""".     
 
-""".
 -doc(#{since => <<"OTP 26.0">>}).
 -spec mime_decode(Base64, Options) -> Data when
       Base64 :: base64_string() | base64_binary(),
       Options :: decode_options(),
       Data :: binary().
+
 
 mime_decode(Bin, Options) when is_binary(Bin) ->
     mime_decode_binary(get_decoding_offset(Options), get_padding(Options), Bin, <<>>);
@@ -346,7 +410,21 @@ mime_decode(List, Options) when is_list(List) ->
 %% converting, whereas decode_to_string crashes if an illegal
 %% character is found
 
--doc "Equivalent to [`decode(Base64)`](`decode/1`), but returns a `t:byte_string/0`.".
+-doc """
+Equivalent to [`decode(Base64)`](`decode/1`), but returns a `t:byte_string/0`.
+
+_Example_:
+```erlang
+1> base64:decode_to_string("SGVsbG8gV29ybGQ=").
+"Hello World"
+2> base64:decode_to_string(<<"SGVsbG8gV29ybGQ=">>).
+"Hello World"
+3> base64:decode_to_string("_w==").
+** exception error: construction of binary failed
+     in function  base64:decode_list_to_string/6 
+        *** segment 1 of type 'integer': expected an integer but got: bad
+```
+""".
 -spec decode_to_string(Base64) -> DataString when
       Base64 :: base64_string() | base64_binary(),
       DataString :: byte_string().
@@ -354,7 +432,19 @@ mime_decode(List, Options) when is_list(List) ->
 decode_to_string(Base64) ->
     decode_to_string(Base64, #{}).
 
--doc "Equivalent to [`decode(Base64, Options)`](`decode/2`), but returns a `t:byte_string/0`.".
+-doc """
+Equivalent to [`decode(Base64, Options)`](`decode/2`), but returns a `t:byte_string/0`.
+
+_Example_:
+```erlang
+1> base64:decode_to_string("SGVsbG8gV29ybGQ=", #{padding => false}).
+"Hello World"
+2> base64:decode_to_string("SGk=", #{mode => urlsafe}).
+"Hi"
+3> base64:decode_to_string("_w==", #{mode => urlsafe}).
+"ÿ"
+```
+""".
 -doc(#{since => <<"OTP 26.0">>}).
 -spec decode_to_string(Base64, Options) -> DataString when
       Base64 :: base64_string() | base64_binary(),
@@ -369,6 +459,12 @@ decode_to_string(List, Options) when is_list(List) ->
 -doc """
 Equivalent to [`mime_decode(Base64)`](`mime_decode/1`),
 but returns a `t:byte_string/0`.
+
+_Example_:
+```erlang
+1> base64:mime_decode_to_string("SGVsbG8gV29ybGQ=").
+"Hello World"
+```
 """.
 -spec mime_decode_to_string(Base64) -> DataString when
       Base64 :: base64_string() | base64_binary(),
@@ -380,6 +476,14 @@ mime_decode_to_string(Base64) ->
 -doc """
 Equivalent to [`mime_decode(Base64, Options)`](`mime_decode/2`),
 but returns a `t:byte_string/0`.
+
+_Example_:
+```erlang
+1> base64:mime_decode_to_string("SGVsbG8gV29ybGQ", #{padding => false}).
+"Hello World"
+2> base64:mime_decode_to_string("_a==", #{mode => urlsafe}).
+"ý"
+```
 """.
 -doc(#{since => <<"OTP 26.0">>}).
 -spec mime_decode_to_string(Base64, Options) -> DataString when
