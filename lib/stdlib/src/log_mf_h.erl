@@ -114,10 +114,12 @@ function is specified, all events are logged.
 ## Examples
 
 ```erlang
-1> Args = log_mf_h:init("/tmp/mylogs", 100000, 5).
-{"/tmp/mylogs",100000,5,#Fun<log_mf_h.0.0>}
-2> Args2 = log_mf_h:init("/tmp/mylogs", 100000, 5, fun(E) -> E =/= ignore end).
-{"/tmp/mylogs",100000,5,#Fun<erl_eval.42.3316493>}
+1> {Dir, MaxB, MaxF, Pred} = log_mf_h:init("/tmp/mylogs", 100000, 5),
+   {Dir, MaxB, MaxF, is_function(Pred, 1)}.
+{"/tmp/mylogs",100000,5,true}
+2> {Dir2, MaxB2, MaxF2, Pred2} = log_mf_h:init("/tmp/mylogs", 100000, 5, fun(E) -> E =/= ignore end),
+   {Dir2, MaxB2, MaxF2, is_function(Pred2, 1)}.
+{"/tmp/mylogs",100000,5,true}
 ```
 """.
 -spec init(Dir, MaxBytes, MaxFiles, Pred) -> Args when

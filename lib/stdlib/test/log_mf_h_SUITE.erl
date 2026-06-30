@@ -24,13 +24,13 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("kernel/include/file.hrl").
 
--export([all/0, suite/0,groups/0,init_per_suite/1, end_per_suite/1, 
-	 init_per_group/2,end_per_group/2, test/1]).
+-export([all/0, suite/0,groups/0,init_per_suite/1, end_per_suite/1,
+	 init_per_group/2,end_per_group/2, test/1,doctests/1]).
 
 suite() -> [{ct_hooks,[ts_install_cth]}].
 
-all() -> 
-    [test].
+all() ->
+    [test,doctests].
 
 groups() -> 
     [].
@@ -112,3 +112,6 @@ read_index_file(Dir) ->
 	    end;
 	_ -> error
     end.
+
+doctests(_Config) ->
+    ct_doctest:module(log_mf_h, [{skipped_blocks, 0}, {missing_tests, []}]).
