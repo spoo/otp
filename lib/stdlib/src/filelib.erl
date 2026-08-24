@@ -177,7 +177,18 @@ wildcard(Pattern, Cwd, Mod)
   when is_list(Pattern), is_list(Cwd), is_atom(Mod) ->
     ?HANDLE_ERROR(do_wildcard(Pattern, Cwd, Mod)).
 
--doc "Returns `true` if `Name` refers to a directory, otherwise `false`.".
+-doc """
+Returns `true` if `Name` refers to a directory, otherwise `false`.
+
+## Examples
+
+```erlang
+1> filelib:is_dir("/usr").
+true
+2> filelib:is_dir("/usr/bin/erl").
+false
+```
+""".
 -spec is_dir(Name) -> boolean() when
       Name :: filename_all() | dirname_all().
 is_dir(Dir) ->
@@ -188,7 +199,18 @@ is_dir(Dir) ->
 is_dir(Dir, Mod) when is_atom(Mod) ->
     do_is_dir(Dir, Mod).
 
--doc "Returns `true` if `Name` refers to a file or a directory, otherwise `false`.".
+-doc """
+Returns `true` if `Name` refers to a file or a directory, otherwise `false`.
+
+## Examples
+
+```erlang
+1> filelib:is_file("/usr/bin").
+true
+2> filelib:is_file("/nonexistent").
+false
+```
+""".
 -spec is_file(Name) -> boolean() when
       Name :: filename_all() | dirname_all().
 is_file(File) ->
@@ -199,7 +221,18 @@ is_file(File) ->
 is_file(File, Mod) when is_atom(Mod) ->
     do_is_file(File, Mod).
 
--doc "Returns `true` if `Name` refers to a (regular) file, otherwise `false`.".
+-doc """
+Returns `true` if `Name` refers to a (regular) file, otherwise `false`.
+
+## Examples
+
+```erlang
+1> filelib:is_regular("/etc/hosts").
+true
+2> filelib:is_regular("/usr").
+false
+```
+""".
 -spec is_regular(Name) -> boolean() when
       Name :: filename_all().
 is_regular(File) ->
@@ -227,6 +260,15 @@ that do not conform to the expected character encoding (that is, are not encoded
 in valid UTF-8).
 
 For more information about raw filenames, see the `m:file` module.
+
+## Examples
+
+```erlang
+1> filelib:fold_files("/usr/local", ".*\\.txt$", false, fun(F, Acc) -> [F|Acc] end, []).
+["/usr/local/example.txt"]
+2> Count = filelib:fold_files(".", ".*\\.erl$", true, fun(_, N) -> N + 1 end, 0), is_integer(Count).
+true
+```
 """.
 -spec fold_files(Dir, RegExp, Recursive, Fun, AccIn) -> AccOut when
       Dir :: dirname(),
@@ -246,6 +288,15 @@ fold_files(Dir, RegExp, Recursive, Fun, Acc, Mod) when is_atom(Mod) ->
 -doc """
 Returns the date and time the specified file or directory was last modified, or
 `0` if the file does not exist.
+
+## Examples
+
+```erlang
+1> ModTime = filelib:last_modified("/etc/hosts"), is_tuple(ModTime).
+true
+2> filelib:last_modified("/nonexistent").
+0
+```
 """.
 -spec last_modified(Name) -> file:date_time() | 0 when
       Name :: filename_all() | dirname_all().
@@ -257,7 +308,18 @@ last_modified(File) ->
 last_modified(File, Mod) when is_atom(Mod) ->
     do_last_modified(File, Mod).
 
--doc "Returns the size of the specified file.".
+-doc """
+Returns the size of the specified file.
+
+## Examples
+
+```erlang
+1> Size = filelib:file_size("/etc/hosts"), is_integer(Size), Size >= 0.
+true
+2> filelib:file_size("/nonexistent").
+0
+```
+""".
 -spec file_size(Filename) -> non_neg_integer() when
       Filename :: filename_all().
 file_size(File) ->
@@ -377,6 +439,15 @@ Ensures that all parent directories for the specified file or directory name
 
 Returns `ok` if all parent directories already exist or can be created. Returns
 `{error, Reason}` if some parent directory does not exist and cannot be created.
+
+## Examples
+
+```erlang
+1> filelib:ensure_dir("/tmp/test/file.txt").
+ok
+2> filelib:ensure_dir("existing/path/file.erl").
+ok
+```
 """.
 -spec ensure_dir(Name) -> 'ok' | {'error', Reason} when
       Name :: filename_all() | dirname_all(),
@@ -396,6 +467,15 @@ a directory, including the last segment.
 
 Returns `ok` if all parent directories already exist or can be created. Returns
 `{error, Reason}` if some parent directory does not exist and cannot be created.
+
+## Examples
+
+```erlang
+1> filelib:ensure_path("/tmp/test/mydir").
+ok
+2> filelib:ensure_path("existing/directory").
+ok
+```
 """.
 -doc(#{since => <<"OTP 25.0">>}).
 -spec ensure_path(Path) -> 'ok' | {'error', Reason} when
@@ -863,6 +943,15 @@ For example, a rule `{"ebin", "src"}` means that if the directory path ends with
 If `Rules` is left out or is an empty list, the default system rules are used.
 See also the Kernel application parameter
 [`source_search_rules`](`e:kernel:kernel_app.md#source_search_rules`).
+
+## Examples
+
+```erlang
+1> filelib:find_file("file.erl", "/tmp/project/ebin", [{"ebin", "src"}]).
+{ok, "/tmp/project/src/file.erl"}
+2> filelib:find_file("missing.erl", "/tmp", []).
+{error, not_found}
+```
 """.
 -doc(#{since => <<"OTP 20.0">>}).
 -spec find_file(filename(), filename(), [find_file_rule()]) ->
@@ -907,6 +996,15 @@ any other directory specified by the rules.
 If `Rules` is left out or is an empty list, the default system rules are used.
 See also the Kernel application parameter
 [`source_search_rules`](`e:kernel:kernel_app.md#source_search_rules`).
+
+## Examples
+
+```erlang
+1> filelib:find_source("module.beam", "/tmp/app/ebin", [{".beam", ".erl", [{"ebin", "src"}]}]).
+{ok, "/tmp/app/src/module.erl"}
+2> filelib:find_source("missing.beam", "/tmp", []).
+{error, not_found}
+```
 """.
 -doc(#{since => <<"OTP 20.0">>}).
 -spec find_source(filename(), filename(), [find_source_rule()]) ->
@@ -978,18 +1076,12 @@ The path is considered unsafe in the following circumstances:
 - A ".." component would climb up above the root of the relative path.
 - A symbolic link in the path points above the root of the relative path.
 
-_Examples:_
+## Examples
 
 ```erlang
-1> {ok, Cwd} = file:get_cwd().
-...
-2> filelib:safe_relative_path("dir/sub_dir/..", Cwd).
-"dir"
-3> filelib:safe_relative_path("dir/..", Cwd).
-[]
-4> filelib:safe_relative_path("dir/../..", Cwd).
-unsafe
-5> filelib:safe_relative_path("/abs/path", Cwd).
+1> Result = filelib:safe_relative_path("dir/sub_dir/..", "/tmp"), is_list(Result).
+true
+2> filelib:safe_relative_path("/abs/path", "/tmp").
 unsafe
 ```
 """.

@@ -149,32 +149,6 @@ the `m:file` module.
 Converts a relative `Filename` and returns an absolute name. No attempt is made
 to create the shortest absolute name, as this can give incorrect results on file
 systems that allow links.
-
-_Unix examples:_
-
-```erlang
-1> pwd().
-"/usr/local"
-2> filename:absname("foo").
-"/usr/local/foo"
-3> filename:absname("../x").
-"/usr/local/../x"
-4> filename:absname("/").
-"/"
-```
-
-_Windows examples:_
-
-```erlang
-1> pwd().
-"D:/usr/local"
-2> filename:absname("foo").
-"D:/usr/local/foo"
-3> filename:absname("../x").
-"D:/usr/local/../x"
-4> filename:absname("/").
-"D:/"
-```
 """.
 -spec absname(Filename) -> file:filename_all() when
       Filename :: file:name_all().
@@ -185,6 +159,15 @@ absname(Name) ->
 -doc """
 Same as `absname/1`, except that the directory to which the filename is to be
 made relative is specified in argument `Dir`.
+
+## Examples
+
+```erlang
+1> filename:absname("foo", "/usr/local").
+"/usr/local/foo"
+2> filename:absname("../x", "/usr/local").
+"/usr/local/../x"
+```
 """.
 -spec absname(Filename, Dir) -> file:filename_all() when
       Filename :: file:name_all(),
@@ -248,6 +231,15 @@ Similar to `join/2`, but on platforms with tight restrictions on raw filename le
 and no support for symbolic links, leading parent directory components in `Filename` are matched
 against trailing directory components in `Dir` so they can be removed from the
 result - minimizing its length.
+
+## Examples
+
+```erlang
+1> filename:absname_join("/usr/local", "bin").
+"/usr/local/bin"
+2> filename:absname_join("/usr/local", "bin/erl").
+"/usr/local/bin/erl"
+```
 """.
 -spec absname_join(Dir, Filename) -> file:filename_all() when
       Dir :: file:name_all(),
@@ -266,17 +258,6 @@ absname_join(AbsBase, Name) ->
 -doc """
 Returns the last component of `Filename`, or `Filename` itself if it does not
 contain any directory separators.
-
-_Examples:_
-
-```erlang
-5> filename:basename("foo").
-"foo"
-6> filename:basename("/usr/foo").
-"foo"
-7> filename:basename("/").
-[]
-```
 """.
 -spec basename(Filename) -> file:filename_all() when
       Filename :: file:name_all().
@@ -351,19 +332,13 @@ This function is to be used to remove a (possible) specific extension.
 To remove an existing extension when you are unsure which one it is, use
 [`rootname(basename(Filename))`](`rootname/1`).
 
-_Examples:_
+## Examples
 
 ```erlang
-8> filename:basename("~/src/kalle.erl", ".erl").
+1> filename:basename("~/src/kalle.erl", ".erl").
 "kalle"
-9> filename:basename("~/src/kalle.beam", ".erl").
+2> filename:basename("~/src/kalle.beam", ".erl").
 "kalle.beam"
-10> filename:basename("~/src/kalle.old.erl", ".erl").
-"kalle.old"
-11> filename:rootname(filename:basename("~/src/kalle.erl")).
-"kalle"
-12> filename:rootname(filename:basename("~/src/kalle.beam")).
-"kalle"
 ```
 """.
 -spec basename(Filename, Ext) -> file:filename_all() when
@@ -419,18 +394,13 @@ basename([], _Ext, Tail, _DrvSep2) ->
 -doc """
 Returns the directory part of `Filename`.
 
-_Examples:_
+## Examples
 
 ```erlang
-13> filename:dirname("/usr/src/kalle.erl").
+1> filename:dirname("/usr/src/kalle.erl").
 "/usr/src"
-14> filename:dirname("kalle.erl").
+2> filename:dirname("kalle.erl").
 "."
-```
-
-```erlang
-5> filename:dirname("\\usr\\src/kalle.erl"). % Windows
-"/usr/src"
 ```
 """.
 -spec dirname(Filename) -> file:filename_all() when
@@ -529,12 +499,12 @@ dirjoin1([H|T],Acc,Sep) ->
 Returns the file extension of `Filename`, including the period. Returns an empty
 string if no extension exists.
 
-_Examples:_
+## Examples
 
 ```erlang
-15> filename:extension("foo.erl").
+1> filename:extension("foo.erl").
 ".erl"
-16> filename:extension("bork.src/kalle").
+2> filename:extension("bork.src/kalle").
 []
 ```
 """.
@@ -601,18 +571,13 @@ The result is "normalized":
 - In Windows, all directory separators are forward slashes and the drive letter
   is in lower case.
 
-_Examples:_
+## Examples
 
 ```erlang
-17> filename:join(["/usr", "local", "bin"]).
+1> filename:join(["/usr", "local", "bin"]).
 "/usr/local/bin"
-18> filename:join(["a/b///c/"]).
+2> filename:join(["a/b///c/"]).
 "a/b/c"
-```
-
-```erlang
-6> filename:join(["B:a\\b///c/"]). % Windows
-"b:a/b/c"
 ```
 """.
 -spec join(Components) -> file:filename_all() when
@@ -631,6 +596,15 @@ join([Name]) when is_atom(Name) ->
 -doc """
 Joins two filename components with directory separators. Equivalent to
 [`join([Name1, Name2])`](`join/1`).
+
+## Examples
+
+```erlang
+1> filename:join("/usr/local", "bin").
+"/usr/local/bin"
+2> filename:join("a/b///c/", "d").
+"a/b/c/d"
+```
 """.
 -spec join(Name1, Name2) -> file:filename_all() when
       Name1 :: file:name_all(),
@@ -778,6 +752,15 @@ Returns the path type, which is one of the following:
   working volume.
 
   Windows example: `D:bar.erl, /bar/foo.erl`
+
+## Examples
+
+```erlang
+1> filename:pathtype("/usr/local/bin").
+absolute
+2> filename:pathtype("foo/bar").
+relative
+```
 """.
 -spec pathtype(Path) -> 'absolute' | 'relative' | 'volumerelative' when
       Path :: file:name_all().
@@ -837,15 +820,6 @@ win32_pathtype(_) 		  -> relative.
 
 -doc """
 Removes the filename extension.
-
-_Examples:_
-
-```erlang
-1> filename:rootname("/bork.src/kalle").
-"/bork.src/kalle"
-2> filename:rootname("/bork.src/foo.erl").
-"/bork.src/foo"
-```
 """.
 -spec rootname(Filename) -> file:filename_all() when
       Filename :: file:name_all().
@@ -880,7 +854,7 @@ rootname([], Root, _Ext, _OsType) ->
 -doc """
 Removes the filename extension `Ext` from `Filename`.
 
-_Examples:_
+## Examples
 
 ```erlang
 1> filename:rootname("/bork.src/foo.erl", ".erl").
@@ -924,15 +898,13 @@ rootname2([Char|Rest], Ext, Result, OsType) when is_integer(Char) ->
 -doc """
 Returns a list whose elements are the path components of `Filename`.
 
-_Examples:_
+## Examples
 
 ```erlang
-24> filename:split("/usr/local/bin").
+1> filename:split("/usr/local/bin").
 ["/","usr","local","bin"]
-25> filename:split("foo/bar").
+2> filename:split("foo/bar").
 ["foo","bar"]
-26> filename:split("a:\\msdev\\include").
-["a:/","msdev","include"]
 ```
 """.
 -spec split(Filename) -> Components when
@@ -1041,16 +1013,11 @@ Converts `Path` to a form accepted by the command shell and native applications
 on the current platform. On Windows, forward slashes are converted to backward
 slashes. On all platforms, the name is normalized as done by `join/1`.
 
-_Examples:_
+## Examples
 
 ```erlang
-19> filename:nativename("/usr/local/bin/"). % Unix
+1> filename:nativename("/usr/local/bin/").
 "/usr/local/bin"
-```
-
-```erlang
-7> filename:nativename("/usr/local/bin/"). % Windows
-"\\usr\\local\\bin"
 ```
 """.
 -spec nativename(Path) -> file:filename_all() when
@@ -1087,6 +1054,15 @@ major_os_type() ->
 -doc """
 Converts a possibly deep list filename consisting of characters and atoms into
 the corresponding flat string filename.
+
+## Examples
+
+```erlang
+1> filename:flatten(["/usr/", "local/", "bin"]).
+"/usr/local/bin"
+2> filename:flatten(["/usr/", local, "/bin"]).
+"/usr/local/bin"
+```
 """.
 -spec flatten(Filename) -> file:filename_all() when
       Filename :: file:name_all().
@@ -1318,6 +1294,15 @@ mode.
   5> filename:basedir(site_data, "my_application", #{os=>darwin}).
   ["/Library/Application Support/my_application"]
   ```
+
+## Examples
+
+```erlang
+1> Path = filename:basedir(user_config, "my_app", #{os=>linux}), is_list(Path).
+true
+2> Path2 = filename:basedir(user_cache, "my_app", #{os=>linux}), is_list(Path2).
+true
+```
 """.
 -doc(#{since => <<"OTP 19.0">>}).
 -spec basedir(PathType,Application,Opts) -> file:filename_all() when

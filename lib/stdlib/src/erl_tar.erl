@@ -113,7 +113,18 @@ opens a tar file on a remote machine using an SFTP channel.
 -include("erl_tar.hrl").
 
 %% Converts the short error reason to a descriptive string.
--doc "Converts an error reason term to a human-readable error message string.".
+-doc """
+Converts an error reason term to a human-readable error message string.
+
+## Examples
+
+```
+1> erl_tar:format_error(invalid_tar_checksum).
+"Checksum failed"
+2> erl_tar:format_error(bad_header).
+"Unrecognized tar header format"
+```
+""".
 -spec format_error(term()) -> string().
 format_error(invalid_tar_checksum) ->
     "Checksum failed";
@@ -327,6 +338,19 @@ The following options modify the defaults for the extraction as follows:
 > The `compressed` and `cooked` flags are invalid when passing a file descriptor
 > with `{file,Fd}`. The file is assumed to have been opened with the appropriate
 > flags.
+
+## Examples
+
+```
+1> erl_tar:create("/tmp/test.tar", [{"file.txt", <<"content">>}], []).
+ok
+2> erl_tar:extract("/tmp/test.tar", [{cwd, "/tmp/extracted"}]).
+ok
+3> erl_tar:create("/tmp/mem.tar", [{"data.bin", <<1,2,3>>}], []).
+ok
+4> {ok, Files} = erl_tar:extract("/tmp/mem.tar", [memory]), is_list(Files).
+true
+```
 """.
 -spec extract(Open :: open_type(), []) ->
                      ok | {error, term()};
@@ -564,7 +588,18 @@ table(Name) ->
 
 %% Returns a list of names of the files in the tar file Name.
 %% Options accepted: compressed, verbose, cooked.
--doc "Retrieves the names of all files in the tar file `Name`.".
+-doc """
+Retrieves the names of all files in the tar file `Name`.
+
+## Examples
+
+```
+1> erl_tar:create("/tmp/list.tar", [{"file1.txt", <<"A">>}, {"file2.bin", <<"B">>}], []).
+ok
+2> erl_tar:table("/tmp/list.tar", []).
+{ok, ["file1.txt", "file2.bin"]}
+```
+""".
 -spec table(Open :: open_type(), [compressed | verbose | cooked]) ->
                    {ok, [name_in_archive() | tar_entry()]} | {error, term()}.
 table(Name, Opts) when is_list(Opts) ->
@@ -877,6 +912,15 @@ The options in `OptionList` modify the defaults as follows:
   link points to into the tar file, use option `dereference`.
 
 - **`verbose`** - Prints an informational message about each added file.
+
+## Examples
+
+```
+1> erl_tar:create("/tmp/test.tar", [{"file1.txt", <<"Hello">>}, {"file2.txt", <<"World">>}], []).
+ok
+2> erl_tar:create("/tmp/compressed.tar.gz", [{"data.bin", <<1,2,3>>}], [compressed]).
+ok
+```
 """.
 -spec create(file:filename_all(), filelist(), [create_opt()]) ->
                     ok | {error, term()} | {error, {string(), term()}}.
@@ -966,6 +1010,17 @@ Options:
 
 - **`{mode,non_neg_integer()}`** - Sets the file permissions.
   See also `file:read_file_info/1`.
+
+## Examples
+
+```
+1> {ok, Tar} = erl_tar:open("/tmp/add.tar", [write]).
+{ok, ...}
+2> erl_tar:add(Tar, <<"content">>, "file.txt", []).
+ok
+3> erl_tar:close(Tar).
+ok
+```
 """.
 -spec add(TarDescriptor, Filename, NameInArchive, Options) ->
         ok | {error, term()} when

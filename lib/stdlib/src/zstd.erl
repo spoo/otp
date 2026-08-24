@@ -259,17 +259,17 @@ which parameters are available and what each parameter does.
 
 Returns `ok` on success, raises an error on failure.
 
-Example:
+## Examples
 
-```
-1> {ok, CCtx} = zstd:context(compress).
-{ok, _}
+```erlang
+1> {ok, CCtx} = zstd:context(compress), ok.
+ok
 2> ok = zstd:set_parameter(CCtx, compressionLevel, 15).
 ok
-3> zstd:stream(CCtx, "abc").
-{continue, _}
-4> catch zstd:set_parameter(CCtx, dictionary, "abc").
-{'EXIT', {{zstd_error, <<"Operation not authorized at current processing stage">>}, _}}
+3> {continue, _} = zstd:stream(CCtx, "abc"), ok.
+ok
+4> {'EXIT', {{zstd_error, Reason}, _Stack}} = catch zstd:set_parameter(CCtx, dictionary, "abc"), Reason.
+<<"Operation not authorized at current processing stage">>
 ```
 """.
 -doc #{ since => "OTP 28.0" }.
@@ -304,14 +304,14 @@ get the `pledgedSrcSize`.
 
 Returns `ok` on success, raises an error on failure.
 
-Example:
+## Examples
 
-```
-1> {ok, CCtx} = zstd:context(compress).
-{ok, _}
+```erlang
+1> {ok, CCtx} = zstd:context(compress), ok.
+ok
 2> zstd:get_parameter(CCtx, compressionLevel).
 3
-3> zstd:set_parameter(CCtx, compressionLevel, 15).
+3> ok = zstd:set_parameter(CCtx, compressionLevel, 15).
 ok
 4> zstd:get_parameter(CCtx, compressionLevel).
 15
@@ -348,16 +348,17 @@ dictionary is given.
 The `compressionLevel` set on a dictionary will override the `compressionLevel`
 set in the `t:context/0`.
 
-Example:
+## Examples
 
-```
-1> {ok, CDict} = zstd:dict(compress, Dict).
-2> Data = lists:duplicate(100, 1).
-[1, 1, 1 | _]
-3> iolist_size(zstd:compress(Data)).
-17
-4> iolist_size(zstd:compress(Data, #{ dictionary => CDict, dictIDFlag => false })).
-16
+```erlang
+1> Dict = binary:copy(<<"the quick brown fox jumps over the lazy dog ">>, 20), ok.
+ok
+2> {ok, CDict} = zstd:dict(compress, Dict), ok.
+ok
+3> Data = binary:copy(<<"the quick brown fox jumps over the lazy dog ">>, 5), ok.
+ok
+4> NoDict = iolist_size(zstd:compress(Data)), WithDict = iolist_size(zstd:compress(Data, #{ dictionary => CDict, dictIDFlag => false })), WithDict < NoDict.
+true
 ```
 
 As loading a dictionary can be a heavy operations, it is possible to create
@@ -378,13 +379,12 @@ Get the dictionary ID of a dictionary or a frame.
 
 The dictionary ID 0 represents no dictionary.
 
-Example:
+## Examples
 
-```
-1> {ok, CDict} = zstd:dict(compress, Dict).
-2> zstd:get_dict_id(CDict).
-1850243626
-3> zstd:get_dict_id(zstd:compress("abc")).
+```erlang
+1> zstd:get_dict_id(zstd:compress(~"abc")).
+0
+2> zstd:get_dict_id(<<"not a valid dict or frame">>).
 0
 ```
 """.
@@ -409,14 +409,13 @@ A compressed Zstandard stream can consist of multiple frames. This
 function will read metadata from the first frame. This information
 can be useful when debugging corrupted Zstandard streams.
 
-Example:
+## Examples
 
-```
-1> Compressed = zstd:compress(~"abc").
-2> zstd:get_frame_header(Compressed).
-{ok,#{frameContentSize => 3,windowSize => 3,blockSizeMax => 3,
-      frameType => 'ZSTD_frame',headerSize => 6,
-      dictID => 0, checksumFlag => false}}
+```erlang
+1> Compressed = zstd:compress(~"abc"), ok.
+ok
+2> {ok, Header} = zstd:get_frame_header(Compressed), {maps:get(frameContentSize, Header), maps:get(frameType, Header), maps:get(dictID, Header)}.
+{3,'ZSTD_frame',0}
 ```
 """.
 -doc #{ since => "OTP 28.0" }.
@@ -449,6 +448,21 @@ Create a compression or decompression context.
 
 A context can be used to do streaming compression/decompression and allows
 re-using parameters for multiple compressions/decompressions.
+
+## Examples
+
+```erlang
+1> {ok, CCtx} = zstd:context(compress, #{ compressionLevel => 15 }), ok.
+ok
+2> zstd:get_parameter(CCtx, compressionLevel).
+15
+3> ok = zstd:close(CCtx).
+ok
+4> {ok, DCtx} = zstd:context(decompress, #{}), ok.
+ok
+5> ok = zstd:close(DCtx).
+ok
+```
 """.
 -doc #{ since => "OTP 28.0" }.
 -spec context(compress, Options :: compress_parameters()) -> {ok, context()};
@@ -466,15 +480,16 @@ context(decompress, Options) ->
 Compress or decompress a stream of data. The last stream of data should be called
 with `finish/2` to complete the compression/decompression.
 
-Example:
+## Examples
 
-```
-1> {ok, CCtx} = zstd:context(compress).
-2> {continue, C1} = zstd:stream(CCtx, ~"a").
-3> {done, C2} = zstd:finish(CCtx, ~"b").
-4> Compressed = iolist_to_binary([C1, C2]).
-<<40,181,47,253,0,88,17,0,0,97,98>>
-5> zstd:decompress(Compressed).
+```erlang
+1> {ok, CCtx} = zstd:context(compress), ok.
+ok
+2> {continue, C1} = zstd:stream(CCtx, ~"a"), ok.
+ok
+3> {done, C2} = zstd:finish(CCtx, ~"b"), ok.
+ok
+4> zstd:decompress(iolist_to_binary([C1, C2])).
 [<<"ab">>]
 ```
 """.
@@ -512,12 +527,15 @@ This flushes all pending compressed data without ending the frame,
 allowing the compressed data to be read immediately while keeping
 the context open for further compression.
 
-Example:
+## Examples
 
-```
-1> {ok, CCtx} = zstd:context(compress).
-2> {continue, C1} = zstd:stream(CCtx, ~"hello").
-3> {continue, C2} = zstd:flush(CCtx).
+```erlang
+1> {ok, CCtx} = zstd:context(compress), ok.
+ok
+2> {continue, C1} = zstd:stream(CCtx, ~"hello"), ok.
+ok
+3> {continue, C2} = zstd:flush(CCtx), ok.
+ok
 4> zstd:decompress([C1, C2]).
 [<<"hello">>]
 ```
@@ -550,14 +568,17 @@ Finish compressing/decompressing data.
 This flushes all output buffers and resets the `t:context/0` so
 that it can be used for compressing/decompressing again.
 
-Example:
+## Examples
 
-```
-1> {ok, DCtx} = zstd:context(decompress).
-2> {continue, D1} = zstd:stream(DCtx, <<40,181,47,253,32>>).
-3> {done, D2} = zstd:finish(DCtx, <<2,17,0,0,97,98>>).
-4> iolist_to_binary([D1,D2]).
-<<"ab">>
+```erlang
+1> {ok, CCtx} = zstd:context(compress), ok.
+ok
+2> {continue, C1} = zstd:stream(CCtx, ~"a"), ok.
+ok
+3> {done, C2} = zstd:finish(CCtx, ~"b"), ok.
+ok
+4> zstd:decompress(iolist_to_binary([C1, C2])).
+[<<"ab">>]
 ```
 """.
 -doc #{ since => "OTP 28.0" }.
@@ -612,17 +633,19 @@ but keeping all parameters set.
 By resetting the state, the context can be re-used for other operations even
 if it is in the middle of a (de)compression stream.
 
-Example:
+## Examples
 
-```
-1> {ok, CCtx} = zstd:context(compress).
-2> zstd:stream(CCtx, "a").
-{continue, _}
-3> zstd:reset(CCtx).
+```erlang
+1> {ok, CCtx} = zstd:context(compress), ok.
 ok
-4> {done, Compressed} = zstd:finish(CCtx, "b").
+2> {continue, _} = zstd:stream(CCtx, "a"), ok.
+ok
+3> ok = zstd:reset(CCtx).
+ok
+4> {done, Compressed} = zstd:finish(CCtx, "b"), ok.
+ok
 5> zstd:decompress(Compressed).
-[~"b"]
+[<<"b">>]
 ```
 """.
 -doc #{ since => "OTP 28.0" }.
@@ -639,6 +662,17 @@ is closed it is no longer possible to use it.
 A `t:context/0` is automatically closed when GC:ed, so the only reason to call
 this function is to make the resources attached to the context be released
 before the next GC.
+
+## Examples
+
+```erlang
+1> {ok, CCtx} = zstd:context(compress), ok.
+ok
+2> ok = zstd:close(CCtx).
+ok
+3> {'EXIT', {badarg, _Stack}} = catch zstd:stream(CCtx, "a"), ok.
+ok
+```
 """.
 -doc #{ since => "OTP 28.0" }.
 -spec close(Ctx :: context()) -> ok.
@@ -658,11 +692,13 @@ compress(Data, CtxOrOptions)
 
 Compress `Data` using the given `t:compress_parameters/0` or the `t:context/0`.
 
-Example:
+## Examples
 
-```
-1> zstd:compress("abc").
-2> zstd:compress("abc", #{ compressionLevel => 20 }).
+```erlang
+1> C1 = zstd:compress("abc"), zstd:decompress(C1).
+[<<"abc">>]
+2> C2 = zstd:compress("abc", #{ compressionLevel => 20 }), zstd:decompress(C2).
+[<<"abc">>]
 ```
 """.
 -doc #{ since => "OTP 28.0" }.
@@ -697,12 +733,15 @@ decompress(Data, CtxOrOptions)
 
 Decompress `Data` using the given `t:decompress_parameters/0` or the `t:context/0`.
 
-Example:
+## Examples
 
-```
-1> Compressed = zstd:compress("abc").
+```erlang
+1> Compressed = zstd:compress("abc"), ok.
+ok
 2> zstd:decompress(Compressed).
-[~"abc"]
+[<<"abc">>]
+3> zstd:decompress(Compressed, #{}).
+[<<"abc">>]
 ```
 """.
 -doc #{ since => "OTP 28.0" }.

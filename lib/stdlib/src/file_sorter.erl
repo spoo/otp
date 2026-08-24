@@ -255,9 +255,7 @@ The possible values of `Reason` returned when an error occurs are:
                    file:posix() | badarg | system_limit}
                 | {premature_eof, file_name()}).
 
--doc """
-Sorts terms on files.
-""".
+-doc(#{equiv => sort([FileName], FileName)}).
 -spec(sort(FileName) -> Reply when
       FileName :: file_name(),
       Reply :: ok | {error, reason()} | input_reply() | output_reply()).
@@ -274,6 +272,23 @@ sort(Input, Output) ->
 
 -doc """
 Sorts terms on files.
+
+## Examples
+
+```erlang
+1> ok = file:write_file("sort_ex.terms", "{b,2}.\n{a,1}.\n").
+ok
+2> ok = file_sorter:sort(["sort_ex.terms"], "sort_ex.terms", [{format,term}]).
+ok
+3> {ok, Terms} = file:consult("sort_ex.terms"), file:delete("sort_ex.terms"), Terms.
+[{a,1},{b,2}]
+4> ok = file:write_file("sort_ex2.terms", "3.\n1.\n2.\n1.\n").
+ok
+5> ok = file_sorter:sort(["sort_ex2.terms"], "sort_ex2.terms", [{format,term},{unique,true}]).
+ok
+6> {ok, Uniques} = file:consult("sort_ex2.terms"), file:delete("sort_ex2.terms"), Uniques.
+[1,2,3]
+```
 """.
 -spec(sort(Input, Output, Options) -> Reply when
       Input :: input(),
@@ -288,9 +303,7 @@ sort(Input0, Output0, Options) ->
             badarg(culprit(tuple_to_list(T)), [Input0, Output0, Options])
     end.
 
--doc """
-Sorts tuples on files.
-""".
+-doc(#{equiv => keysort(KeyPos, [FileName], FileName)}).
 -spec(keysort(KeyPos, FileName) -> Reply when
       KeyPos :: key_pos(),
       FileName :: file_name(),
@@ -311,6 +324,23 @@ keysort(KeyPos, Input, Output) ->
 Sorts tuples on files. The sort is performed on the element(s) mentioned in
 `KeyPos`. If two tuples compare equal (`==`) on one element, the next element
 according to `KeyPos` is compared. The sort is stable.
+
+## Examples
+
+```erlang
+1> ok = file:write_file("keysort_ex.terms", "{b,2}.\n{a,1}.\n{a,9}.\n").
+ok
+2> ok = file_sorter:keysort(1, ["keysort_ex.terms"], "keysort_ex.terms", [{format,term}]).
+ok
+3> {ok, Terms} = file:consult("keysort_ex.terms"), file:delete("keysort_ex.terms"), Terms.
+[{a,1},{a,9},{b,2}]
+4> ok = file:write_file("keysort_ex2.terms", "{a,1}.\n{a,2}.\n{b,3}.\n").
+ok
+5> ok = file_sorter:keysort(1, ["keysort_ex2.terms"], "keysort_ex2.terms", [{format,term},{unique,true}]).
+ok
+6> {ok, Uniques} = file:consult("keysort_ex2.terms"), file:delete("keysort_ex2.terms"), Uniques.
+[{a,1},{b,3}]
+```
 """.
 -spec(keysort(KeyPos, Input, Output, Options) -> Reply when
       KeyPos :: key_pos(),
@@ -347,6 +377,25 @@ merge(Files, Output) ->
 
 -doc """
 Merges terms on files. Each input file is assumed to be sorted.
+
+## Examples
+
+```erlang
+1> ok = file:write_file("merge_ex1.terms", "1.\n3.\n").
+ok
+2> ok = file:write_file("merge_ex2.terms", "2.\n4.\n").
+ok
+3> ok = file_sorter:merge(["merge_ex1.terms", "merge_ex2.terms"], "merge_ex_out.terms", [{format,term}]).
+ok
+4> {ok, Terms} = file:consult("merge_ex_out.terms"), file:delete("merge_ex1.terms"), file:delete("merge_ex2.terms"), file:delete("merge_ex_out.terms"), Terms.
+[1,2,3,4]
+5> ok = file:write_file("merge_ex3.terms", "").
+ok
+6> ok = file_sorter:merge(["merge_ex3.terms"], "merge_ex3.terms", [{format,term}]).
+ok
+7> {ok, Empty} = file:consult("merge_ex3.terms"), file:delete("merge_ex3.terms"), Empty.
+[]
+```
 """.
 -spec(merge(FileNames, Output, Options) -> Reply when
       FileNames :: file_names(),
@@ -373,6 +422,25 @@ keymerge(KeyPos, Files, Output) ->
 
 -doc """
 Merges tuples on files. Each input file is assumed to be sorted on key(s).
+
+## Examples
+
+```erlang
+1> ok = file:write_file("keymerge_ex1.terms", "{a,1}.\n{c,3}.\n").
+ok
+2> ok = file:write_file("keymerge_ex2.terms", "{b,2}.\n").
+ok
+3> ok = file_sorter:keymerge(1, ["keymerge_ex1.terms", "keymerge_ex2.terms"], "keymerge_ex_out.terms", [{format,term}]).
+ok
+4> {ok, Terms} = file:consult("keymerge_ex_out.terms"), file:delete("keymerge_ex1.terms"), file:delete("keymerge_ex2.terms"), file:delete("keymerge_ex_out.terms"), Terms.
+[{a,1},{b,2},{c,3}]
+5> ok = file:write_file("keymerge_ex3.terms", "").
+ok
+6> ok = file_sorter:keymerge(1, ["keymerge_ex3.terms"], "keymerge_ex3.terms", [{format,term}]).
+ok
+7> {ok, Empty} = file:consult("keymerge_ex3.terms"), file:delete("keymerge_ex3.terms"), Empty.
+[]
+```
 """.
 -spec(keymerge(KeyPos, FileNames, Output, Options) -> Reply when
       KeyPos :: key_pos(),
@@ -411,6 +479,19 @@ check(FileName) ->
 -doc """
 Checks files for sortedness. If a file is not sorted, the first out-of-order
 element is returned. The first term on a file has position 1.
+
+## Examples
+
+```erlang
+1> ok = file:write_file("check_ex1.terms", "1.\n2.\n3.\n").
+ok
+2> R1 = file_sorter:check(["check_ex1.terms"], [{format,term}]), file:delete("check_ex1.terms"), R1.
+{ok,[]}
+3> ok = file:write_file("check_ex2.terms", "1.\n3.\n2.\n").
+ok
+4> {ok, [{_FileName, Pos, Term}]} = file_sorter:check(["check_ex2.terms"], [{format,term}]), file:delete("check_ex2.terms"), {Pos, Term}.
+{3,2}
+```
 """.
 -spec(check(FileNames, Options) -> Reply when
       FileNames :: file_names(),
@@ -440,6 +521,19 @@ keycheck(KeyPos, FileName) ->
 -doc """
 Checks files for sortedness. If a file is not sorted, the first out-of-order
 element is returned. The first term on a file has position 1.
+
+## Examples
+
+```erlang
+1> ok = file:write_file("keycheck_ex1.terms", "{a,1}.\n{b,2}.\n").
+ok
+2> R1 = file_sorter:keycheck(1, ["keycheck_ex1.terms"], [{format,term}]), file:delete("keycheck_ex1.terms"), R1.
+{ok,[]}
+3> ok = file:write_file("keycheck_ex2.terms", "{a,1}.\n{c,3}.\n{b,2}.\n").
+ok
+4> {ok, [{_FileName, Pos, Term}]} = file_sorter:keycheck(1, ["keycheck_ex2.terms"], [{format,term}]), file:delete("keycheck_ex2.terms"), {Pos, Term}.
+{3,{b,2}}
+```
 """.
 -spec(keycheck(KeyPos, FileNames, Options) -> Reply when
       KeyPos :: key_pos(),

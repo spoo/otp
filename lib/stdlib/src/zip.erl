@@ -391,6 +391,17 @@ Options:
 - **`{cwd, CWD}`** - Uses the specified directory as current directory. It is
   prepended to filenames when extracting them from the zip archive. (Acting like
   `file:set_cwd/1` in Kernel, but without changing the global `cwd` property.)
+
+## Examples
+
+```erlang
+1> {ok, {_Name, Bin}} = zip:zip("unzip_ex.zip", [{"a.txt", <<"1">>}, {"b.txt", <<"2">>}], [memory]), ok.
+ok
+2> zip:unzip(Bin, [memory]).
+{ok,[{"a.txt",<<"1">>},{"b.txt",<<"2">>}]}
+3> zip:unzip(Bin, [memory, {file_list, ["a.txt"]}]).
+{ok,[{"a.txt",<<"1">>}]}
+```
 """.
 -spec(unzip(Archive, Options) -> RetValue when
       Archive :: file:name() | binary(),
@@ -459,33 +470,14 @@ if the archive is empty. It is not necessary to iterate over all files in the
 archive. The iteration can be ended prematurely in a controlled manner by
 throwing an exception.
 
-_Example:_
+## Examples
 
 ```erlang
-> Name = "dummy.zip".
-"dummy.zip"
-> {ok, {Name, Bin}} = zip:create(Name, [{"foo", <<"FOO">>}, {"bar", <<"BAR">>}], [memory]).
-{ok,{"dummy.zip",
-     <<80,75,3,4,20,0,0,0,0,0,74,152,97,60,171,39,212,26,3,0,
-       0,0,3,0,0,...>>}}
-> {ok, FileSpec} = zip:foldl(fun(N, I, B, Acc) -> [{N, B(), I()} | Acc] end, [], {Name, Bin}).
-{ok,[{"bar",<<"BAR">>,
-      {file_info,3,regular,read_write,
-                 {{2010,3,1},{19,2,10}},
-                 {{2010,3,1},{19,2,10}},
-                 {{2010,3,1},{19,2,10}},
-                 54,1,0,0,0,0,0}},
-     {"foo",<<"FOO">>,
-      {file_info,3,regular,read_write,
-                 {{2010,3,1},{19,2,10}},
-                 {{2010,3,1},{19,2,10}},
-                 {{2010,3,1},{19,2,10}},
-                 54,1,0,0,0,0,0}}]}
-> {ok, {Name, Bin}} = zip:create(Name, lists:reverse(FileSpec), [memory]).
-{ok,{"dummy.zip",
-     <<80,75,3,4,20,0,0,0,0,0,74,152,97,60,171,39,212,26,3,0,
-       0,0,3,0,0,...>>}}
-> catch zip:foldl(fun("foo", _, B, _) -> throw(B()); (_,_,_,Acc) -> Acc end, [], {Name, Bin}).
+1> {ok, {Name, Bin}} = zip:zip("dummy.zip", [{"foo", <<"FOO">>}, {"bar", <<"BAR">>}], [memory]), ok.
+ok
+2> zip:foldl(fun(N, _I, B, Acc) -> [{N, B()} | Acc] end, [], {Name, Bin}).
+{ok,[{"bar",<<"BAR">>},{"foo",<<"FOO">>}]}
+3> catch zip:foldl(fun("foo", _I, B, _Acc) -> throw(B()); (_,_,_,Acc) -> Acc end, [], {Name, Bin}).
 <<"FOO">>
 ```
 """.
@@ -634,6 +626,19 @@ Options:
 
   - **`{del,[Extension]}`** - Deletes these extensions from the list of
     uncompress extensions.
+
+## Examples
+
+```erlang
+1> ok = file:write_file("zip_ex.txt", <<"Hello">>).
+ok
+2> {ok, "zip_ex.zip"} = zip:zip("zip_ex.zip", ["zip_ex.txt"], []).
+{ok,"zip_ex.zip"}
+3> file:delete("zip_ex.txt"), file:delete("zip_ex.zip").
+ok
+4> {ok, {"zip_ex2.zip", Bin}} = zip:zip("zip_ex2.zip", [{"data.txt", <<"Hello">>}], [memory]), is_binary(Bin).
+true
+```
 """.
 -spec(zip(Name, FileList, Options) -> RetValue when
       Name     :: file:name(),
@@ -709,6 +714,17 @@ One option is available:
   "extra" features are "extended timestamps" and "UID and GID" handling.
   By default only "extended timestamps" is enabled when listing files.
   See `t:extra/0` for more details.
+
+## Examples
+
+```erlang
+1> {ok, {_Name, Bin}} = zip:zip("list_dir_ex.zip", [{"a.txt", <<"hi">>}], [memory, {comment, "hello archive"}]), ok.
+ok
+2> {ok, Entries} = zip:list_dir(Bin), [N || {zip_file, N, _Info, _Comment, _Offset, _CompSize} <- Entries].
+["a.txt"]
+3> {ok, [{zip_comment, Comment} | _]} = zip:list_dir(Bin), Comment.
+"hello archive"
+```
 """.
 -spec(list_dir(Archive, Options) -> RetValue when
       Archive :: file:name() | binary(),
@@ -767,6 +783,19 @@ The archive must be closed with `zip_close/1`.
 
 The `ZipHandle` is closed if the process that originally opened the archive
 dies.
+
+## Examples
+
+```erlang
+1> {ok, {_Name, Bin}} = zip:zip("zip_open_ex.zip", [{"a.txt", <<"hello">>}], [memory]), ok.
+ok
+2> {ok, Handle} = zip:zip_open(Bin, [memory]), is_pid(Handle).
+true
+3> zip:zip_close(Handle).
+ok
+4> zip:zip_open("nonexistent_archive.zip", []).
+{error,enoent}
+```
 """.
 -spec(zip_open(Archive, Options) -> {ok, ZipHandle} | {error, Reason} when
       Archive :: file:name() | binary(),
@@ -792,6 +821,17 @@ zip_get(Pid) when is_pid(Pid) ->
 -doc """
 Closes a zip archive, previously opened with [`zip_open/1,2`](`zip_open/1`). All
 resources are closed, and the handle is not to be used after closing.
+
+## Examples
+
+```erlang
+1> {ok, {_Name, Bin}} = zip:zip("zip_close_ex.zip", [{"a.txt", <<"hello">>}], [memory]), ok.
+ok
+2> {ok, Handle} = zip:zip_open(Bin, [memory]), is_pid(Handle).
+true
+3> zip:zip_close(Handle).
+ok
+```
 """.
 -spec(zip_close(ZipHandle) -> ok | {error, einval} when
       ZipHandle :: handle()).
@@ -804,6 +844,21 @@ Extracts one or all files from an open archive.
 
 The files are unzipped to memory or to file, depending on the options specified
 to function [`zip_open/1,2`](`zip_open/1`) when opening the archive.
+
+## Examples
+
+```erlang
+1> {ok, {_Name, Bin}} = zip:zip("zip_get_ex.zip", [{"a.txt", <<"hello">>}], [memory]), ok.
+ok
+2> {ok, Handle} = zip:zip_open(Bin, [memory]), is_pid(Handle).
+true
+3> zip:zip_get("a.txt", Handle).
+{ok,{"a.txt",<<"hello">>}}
+4> zip:zip_get("missing.txt", Handle).
+{error,file_not_found}
+5> zip:zip_close(Handle).
+ok
+```
 """.
 -spec(zip_get(FileName, ZipHandle) -> {ok, Result} | {error, Reason} when
       FileName :: file:name(),
@@ -814,7 +869,22 @@ to function [`zip_open/1,2`](`zip_open/1`) when opening the archive.
 zip_get(FileName, Pid) when is_pid(Pid) ->
     request(self(), Pid, {get, FileName}).
 
--doc "Extracts one crc32 checksum from an open archive.".
+-doc """
+Extracts one crc32 checksum from an open archive.
+
+## Examples
+
+```erlang
+1> {ok, {_Name, Bin}} = zip:zip("zip_crc32_ex.zip", [{"a.txt", <<"hello">>}], [memory]), ok.
+ok
+2> {ok, Handle} = zip:zip_open(Bin, [memory]), is_pid(Handle).
+true
+3> zip:zip_get_crc32("a.txt", Handle).
+{ok,907060870}
+4> zip:zip_close(Handle).
+ok
+```
+""".
 -doc(#{since => <<"OTP 26.0">>}).
 -spec(zip_get_crc32(FileName, ZipHandle) -> {ok, CRC} | {error, Reason} when
       FileName :: file:name(),
@@ -828,6 +898,19 @@ zip_get_crc32(FileName, Pid) when is_pid(Pid) ->
 -doc """
 Returns the file list of an open zip archive. The first returned element is the
 zip archive comment.
+
+## Examples
+
+```erlang
+1> {ok, {_Name, Bin}} = zip:zip("zip_list_dir_ex.zip", [{"a.txt", <<"hi">>}], [memory]), ok.
+ok
+2> {ok, Handle} = zip:zip_open(Bin, [memory]), is_pid(Handle).
+true
+3> {ok, Entries} = zip:zip_list_dir(Handle), [N || {zip_file, N, _Info, _Comment, _Offset, _CompSize} <- Entries].
+["a.txt"]
+4> zip:zip_close(Handle).
+ok
+```
 """.
 -spec(zip_list_dir(ZipHandle) -> {ok, Result} | {error, Reason} when
       Result :: [zip_comment() | zip_file()],
@@ -856,6 +939,16 @@ zip_tt(Pid) when is_pid(Pid) ->
 -doc """
 Prints all filenames in the zip archive `Archive` to the Erlang shell. (Similar
 to `tar t`.)
+
+## Examples
+
+```erlang
+1> {ok, {_Name, Bin}} = zip:zip("t_ex.zip", [{"a.txt", <<"hello">>}], [memory]), ok.
+ok
+2> zip:t(Bin).
+a.txt
+ok
+```
 """.
 -spec(t(Archive) -> ok when
       Archive :: file:name() | binary() | ZipHandle,
