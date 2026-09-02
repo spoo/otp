@@ -51,6 +51,8 @@
 -export([old_to_integer/1,old_to_float/1]).
 -export([to_upper_to_lower/1]).
 
+-export([doctests/1]).
+
 %% Run tests when debugging them
 -export([debug/0, time_func/4]).
 -compile([nowarn_deprecated_function]).
@@ -60,7 +62,7 @@ suite() ->
      {timetrap,{minutes,1}}].
 
 all() ->
-    [{group, chardata}, {group, list_string}].
+    [{group, chardata}, {group, list_string}, doctests].
 
 groups() ->
     [{chardata,
@@ -1659,3 +1661,29 @@ join(Config) when is_list(Config) ->
     %% invalid arg type
     ?assertError(_, string:join([apa], "")),
     ok.
+
+doctests(_Config) ->
+    %% 1 pre-existing illustrative ```erlang block (in replace/4's doc) is
+    %% a plain code snippet ("Can be implemented as: lists:join(...)")
+    %% rather than a runnable "1>" shell prompt; it's prose, not a
+    %% doctest, and is intentionally left as-is alongside the real
+    %% "## Examples" section.
+    {ok, #docs_v1{ docs = Docs }} = code:get_doc(string),
+    ObsoleteFunctions = [{F,A} || {{function,F,A},_,_,#{},#{group := ~"Obsolete API functions"}} <- Docs],
+    ok = ct_doctest:module(string, [{skipped_blocks, 1},
+                                        {missing_tests,
+                                        [{cspan,2},
+                                         {join,2},
+                                         {left,3},
+                                         {right,3},
+                                         {rstr,2},
+                                         {span,2},
+                                         {str,2},
+                                         {strip,3},
+                                         {sub_string,3},
+                                         {sub_word,3},
+                                         {substr,3},
+                                         {tokens,2},
+                                         {words,2}]},
+                                       {stale,[]},
+                                       {invalid,[]}]).
