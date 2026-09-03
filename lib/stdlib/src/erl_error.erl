@@ -176,6 +176,14 @@ end
 See `erlang:error/3` for details on how to raise an exception with `error_info`
 included.
 
+## Other Examples
+
+```erlang
+1> Stk = [{lists, nth, [1, []], [{file,"lists.erl"},{line,100}]}].
+2> Message = erl_error:format_exception(error, badarg, Stk).
+3> unicode:characters_to_binary(Message).
+<<"exception error: bad argument\n in function  lists:nth/2\n     called as lists:nth(1,[])">>
+```
 """.
 -doc(#{since => <<"OTP 24.0">>}).
 -spec format_exception(Class, Reason, StackTrace, Options) -> unicode:chardata() when

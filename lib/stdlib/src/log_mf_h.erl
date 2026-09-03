@@ -114,11 +114,11 @@ function is specified, all events are logged.
 ## Examples
 
 ```erlang
-1> {Dir, MaxB, MaxF, Pred} = log_mf_h:init("/tmp/mylogs", 100000, 5),
-   {Dir, MaxB, MaxF, is_function(Pred, 1)}.
+1> {Dir, MaxB, MaxF, Pred} = log_mf_h:init("/tmp/mylogs", 100000, 5).
+2> {Dir, MaxB, MaxF, is_function(Pred, 1)}.
 {"/tmp/mylogs",100000,5,true}
-2> {Dir2, MaxB2, MaxF2, Pred2} = log_mf_h:init("/tmp/mylogs", 100000, 5, fun(E) -> E =/= ignore end),
-   {Dir2, MaxB2, MaxF2, is_function(Pred2, 1)}.
+3> {Dir2, MaxB2, MaxF2, Pred2} = log_mf_h:init("/tmp/mylogs", 100000, 5, fun(E) -> E =/= ignore end).
+4> {Dir2, MaxB2, MaxF2, is_function(Pred2, 1)}.
 {"/tmp/mylogs",100000,5,true}
 ```
 """.
